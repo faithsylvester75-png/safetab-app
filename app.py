@@ -18,7 +18,7 @@ with st.sidebar.form("input_form", clear_on_submit=True):
     submitted = st.form_submit_button("Log Tablet")
 
 if submitted and name and tab_id:
-    # Read current data with ttl=0 to force a fresh look
+    # Read current data
     df = conn.read(spreadsheet=URL, ttl=0)
     
     # Create the new row
@@ -29,7 +29,7 @@ if submitted and name and tab_id:
         "Date": datetime.now().strftime("%Y-%m-%d")
     }])
     
-    # Combine and update
+    # Combine and Update
     updated_df = pd.concat([df, new_entry], ignore_index=True)
     conn.update(spreadsheet=URL, data=updated_df)
     
