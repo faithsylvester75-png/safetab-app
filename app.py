@@ -8,7 +8,8 @@ st.title("🛡️ SafeTab: Smart Search & Sync")
 
 # Connect to Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
-URL = "PASTE_YOUR_GOOGLE_SHEET_URL_HERE"
+URL = "https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit"
+
 
 # --- SIDEBAR: NEW SUBMISSION ---
 st.sidebar.header("📥 Record Submission")
