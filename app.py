@@ -18,7 +18,7 @@ with st.sidebar.form("input_form", clear_on_submit=True):
     submitted = st.form_submit_button("Log Tablet")
 
 if submitted and name and tab_id:
-    # 1. Read current data (ttl=0 forces it to check new permissions)
+    # 1. Read current data (ttl=0 forces a fresh check of your 'Editor' status)
     df = conn.read(spreadsheet=URL, ttl=0)
     
     # 2. Create the new row
@@ -42,4 +42,4 @@ try:
     st.subheader("🔍 Current Logs")
     st.dataframe(data, use_container_width=True)
 except:
-    st.info("Start by logging a tablet on the left!")
+    st.info("The sheet is ready! Start by logging a tablet in the sidebar.")
