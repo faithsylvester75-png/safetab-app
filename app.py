@@ -3,43 +3,52 @@ import pandas as pd
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
+# ---------------- PAGE SETUP ---------------- #
 st.set_page_config(page_title="SafeTab Pro", layout="wide")
 st.title("🛡️ SafeTab: Smart Search & Sync")
 
-# Connect to Google Sheets
+# ---------------- GOOGLE SHEETS CONNECTION ---------------- #
 conn = st.connection("gsheets", type=GSheetsConnection)
-URL = "https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit"
 
-# SIDEBAR: RECORD SUBMISSION
+# ---------------- SIDEBAR: RECORD SUBMISSION ---------------- #
 st.sidebar.header("📥 Record Submission")
+
 with st.sidebar.form("input_form", clear_on_submit=True):
     name = st.text_input("Student Name")
     tab_id = st.text_input("Tablet ID")
     submitted = st.form_submit_button("Log Tablet")
 
+# ---------------- HANDLE FORM SUBMISSION ---------------- #
 if submitted and name and tab_id:
-    # 1. Read current data (ttl=0 forces a fresh check of permissions)
-    df = conn.read(spreadsheet=URL, ttl=0)
     
-    # 2. Create the new row
+    # Read existing sheet data
+    try:
+        df = conn.read(ttl=0)
+    except:
+        df = pd.DataFrame(columns=["Name", "Tablet ID", "Time", "Date"])
+
+    # Create new entry
     new_entry = pd.DataFrame([{
-        "Name": name, 
-        "Tablet ID": tab_id, 
-        "Time": datetime.now().strftime("%H:%M"), 
+        "Name": name,
+        "Tablet ID": tab_id,
+        "Time": datetime.now().strftime("%H:%M"),
         "Date": datetime.now().strftime("%Y-%m-%d")
     }])
-    
-    # 3. Combine and Update
+
+    # Append new entry
     updated_df = pd.concat([df, new_entry], ignore_index=True)
-    conn.update(spreadsheet=URL, data=updated_df)
-    
-    st.sidebar.success(f"✅ Verified: {name}")
+
+    # Update Google Sheet
+    conn.update(data=updated_df)
+
+    st.sidebar.success(f"✅ Logged successfully: {name}")
     st.rerun()
 
-# MAIN PAGE: VIEW DATA
+# ---------------- MAIN PAGE: DISPLAY DATA ---------------- #
+st.subheader("🔍 Current Logs")
+
 try:
-    data = conn.read(spreadsheet=URL, ttl=0)
-    st.subheader("🔍 Current Logs")
+    data = conn.read(ttl=0)
     st.dataframe(data, use_container_width=True)
 except:
-    st.info("Ready to log your first tablet!")
+    st.info("No records found yet. Log your first tablet!")
