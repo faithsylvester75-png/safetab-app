@@ -3,46 +3,43 @@ import pandas as pd
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
-st.title("🛡️ SafeTab: Permanent Record System")
+st.set_page_config(page_title="SafeTab Pro", layout="wide")
+st.title("🛡️ SafeTab: Smart Search & Sync")
 
-# 1. Establish connection to Google Sheets
+# Connect to Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
+URL = "PASTE_YOUR_GOOGLE_SHEET_URL_HERE"
 
-# 2. Sidebar for Submission
-st.sidebar.header("Record Submission")
-student_name = st.sidebar.text_input("Student Name")
-tablet_id = st.sidebar.text_input("Tablet ID")
+# --- SIDEBAR: NEW SUBMISSION ---
+st.sidebar.header("📥 Record Submission")
+with st.sidebar.form("input_form", clear_on_submit=True):
+    name = st.text_input("Student Name")
+    tab_id = st.text_input("Tablet ID")
+    submitted = st.form_submit_button("Log Tablet")
 
-if st.sidebar.button("Submit Tablet"):
-    if student_name and tablet_id:
-        # Create a new row of data
-        new_row = pd.DataFrame([{
-            "Name": student_name,
-            "Tablet ID": tablet_id,
-            "Time": datetime.now().strftime("%H:%M:%S"),
-            "Status": "Submitted"
-        }])
-        
-        # Read existing data and add the new row
-        existing_data = conn.read(spreadsheet="https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit?usp=drivesdk")
-        updated_df = pd.concat([existing_data, new_row], ignore_index=True)
-        
-        # Update the Google Sheet
-        conn.update(spreadsheet="https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit?usp=drivesdk", data=updated_df)
-        st.sidebar.success("Saved to Google Sheets!")
-    else:
-        st.sidebar.error("Please fill all fields")
+if submitted and name and tab_id:
+    df = conn.read(spreadsheet=URL)
+    new_entry = pd.DataFrame([{"Name": name, "Tablet ID": tab_id, "Time": datetime.now().strftime("%H:%M"), "Date": datetime.now().strftime("%Y-%m-%d")}])
+    updated_df = pd.concat([df, new_entry], ignore_index=True)
+    conn.update(spreadsheet=URL, data=updated_df)
+    st.sidebar.success(f"Verified: {name}")
 
-# 3. Display the Log from Google Sheets
-st.subheader("Live Spreadsheet Data")
-data = conn.read(spreadsheet="https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit?usp=drivesdk")
-st.dataframe(data)
+# --- MAIN PAGE: SEARCH & VIEW ---
+# Load data
+data = conn.read(spreadsheet=URL)
 
-# 4. Download Button
+# Search Functionality
+st.subheader("🔍 Search Records")
+search_query = st.text_input("Enter Student Name or Tablet ID to check status")
+
+if search_query:
+    filtered_data = data[data.apply(lambda row: search_query.lower() in row.astype(str).str.lower().values, axis=1)]
+    st.write(f"Found {len(filtered_data)} record(s):")
+    st.dataframe(filtered_data, use_container_width=True)
+else:
+    st.write("Showing all records for today:")
+    st.dataframe(data, use_container_width=True)
+
+# Download Button for the Prefect's Report
 csv = data.to_csv(index=False).encode('utf-8')
-st.download_button(
-    label="📥 Download Daily Report (CSV)",
-    data=csv,
-    file_name=f"tablet_report_{datetime.now().strftime('%Y-%m-%d')}.csv",
-    mime='text/csv',
-)
+st.download_button("📂 Download CSV Report", csv, "daily_report.csv", "text/csv")
