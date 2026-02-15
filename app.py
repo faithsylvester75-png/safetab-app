@@ -1,36 +1,48 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from streamlit_gsheets import GSheetsConnection
 
-# App Title
-st.title("🛡️ SafeTab: Prefect Record System")
+st.title("🛡️ SafeTab: Permanent Record System")
 
-# Initialize a simple "database" in memory
-if 'records' not in st.session_state:
-    st.session_state.records = pd.DataFrame(columns=["Name", "Tablet ID", "Time", "Status"])
+# 1. Establish connection to Google Sheets
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Sidebar for Submission
+# 2. Sidebar for Submission
 st.sidebar.header("Record Submission")
 student_name = st.sidebar.text_input("Student Name")
-tablet_id = st.sidebar.text_input("Tablet ID / Scan Code")
-condition = st.sidebar.selectbox("Condition", ["Perfect", "Dirty", "Damaged"])
+tablet_id = st.sidebar.text_input("Tablet ID")
 
 if st.sidebar.button("Submit Tablet"):
     if student_name and tablet_id:
-        new_data = {
+        # Create a new row of data
+        new_row = pd.DataFrame([{
             "Name": student_name,
             "Tablet ID": tablet_id,
             "Time": datetime.now().strftime("%H:%M:%S"),
             "Status": "Submitted"
-        }
-        st.session_state.records = pd.concat([st.session_state.records, pd.DataFrame([new_data])], ignore_index=True)
-        st.sidebar.success(f"Recorded {student_name}'s tablet!")
+        }])
+        
+        # Read existing data and add the new row
+        existing_data = conn.read(spreadsheet="https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit?usp=drivesdk")
+        updated_df = pd.concat([existing_data, new_row], ignore_index=True)
+        
+        # Update the Google Sheet
+        conn.update(spreadsheet="https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit?usp=drivesdk", data=updated_df)
+        st.sidebar.success("Saved to Google Sheets!")
     else:
-        st.sidebar.error("Please enter both Name and ID")
+        st.sidebar.error("Please fill all fields")
 
-# Main Dashboard
-st.subheader("Daily Submission Log")
-st.table(st.session_state.records)
+# 3. Display the Log from Google Sheets
+st.subheader("Live Spreadsheet Data")
+data = conn.read(spreadsheet="https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit?usp=drivesdk")
+st.dataframe(data)
 
-# Summary Stats
-st.metric(label="Tablets Collected", value=len(st.session_state.records))
+# 4. Download Button
+csv = data.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label="📥 Download Daily Report (CSV)",
+    data=csv,
+    file_name=f"tablet_report_{datetime.now().strftime('%Y-%m-%d')}.csv",
+    mime='text/csv',
+)
