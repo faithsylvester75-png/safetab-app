@@ -10,7 +10,7 @@ st.title("🛡️ SafeTab: Smart Search & Sync")
 conn = st.connection("gsheets", type=GSheetsConnection)
 URL = "https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit"
 
-# SIDEBAR: RECORD SUBMISSION
+# --- SIDEBAR: RECORD SUBMISSION ---
 st.sidebar.header("📥 Record Submission")
 with st.sidebar.form("input_form", clear_on_submit=True):
     name = st.text_input("Student Name")
@@ -18,10 +18,10 @@ with st.sidebar.form("input_form", clear_on_submit=True):
     submitted = st.form_submit_button("Log Tablet")
 
 if submitted and name and tab_id:
-    # 1. Read current data with ttl=0 to force a fresh permission check
+    # 1. Read current data (ttl=0 forces a fresh check of your 'Editor' permission)
     df = conn.read(spreadsheet=URL, ttl=0)
     
-    # 2. Create the new entry row
+    # 2. Create the new row
     new_entry = pd.DataFrame([{
         "Name": name, 
         "Tablet ID": tab_id, 
@@ -29,17 +29,17 @@ if submitted and name and tab_id:
         "Date": datetime.now().strftime("%Y-%m-%d")
     }])
     
-    # 3. Combine and Update the sheet
+    # 3. Combine and Update the Sheet
     updated_df = pd.concat([df, new_entry], ignore_index=True)
     conn.update(spreadsheet=URL, data=updated_df)
     
     st.sidebar.success(f"✅ Verified: {name}")
     st.rerun()
 
-# MAIN PAGE: VIEW DATA
+# --- MAIN PAGE: VIEW DATA ---
 try:
     data = conn.read(spreadsheet=URL, ttl=0)
     st.subheader("🔍 Current Logs")
     st.dataframe(data, use_container_width=True)
 except:
-    st.info("System Ready. Start by logging a tablet in the sidebar.")
+    st.info("System connected. Ready to log your first tablet!")
