@@ -18,10 +18,10 @@ with st.sidebar.form("input_form", clear_on_submit=True):
     submitted = st.form_submit_button("Log Tablet")
 
 if submitted and name and tab_id:
-    # Read current data
+    # 1. Read current data (ttl=0 forces it to check new permissions)
     df = conn.read(spreadsheet=URL, ttl=0)
     
-    # Create the new row
+    # 2. Create the new row
     new_entry = pd.DataFrame([{
         "Name": name, 
         "Tablet ID": tab_id, 
@@ -29,7 +29,7 @@ if submitted and name and tab_id:
         "Date": datetime.now().strftime("%Y-%m-%d")
     }])
     
-    # Combine and Update
+    # 3. Combine and Update
     updated_df = pd.concat([df, new_entry], ignore_index=True)
     conn.update(spreadsheet=URL, data=updated_df)
     
@@ -37,6 +37,9 @@ if submitted and name and tab_id:
     st.rerun()
 
 # MAIN PAGE: VIEW DATA
-data = conn.read(spreadsheet=URL, ttl=0)
-st.subheader("🔍 Current Logs")
-st.dataframe(data, use_container_width=True)
+try:
+    data = conn.read(spreadsheet=URL, ttl=0)
+    st.subheader("🔍 Current Logs")
+    st.dataframe(data, use_container_width=True)
+except:
+    st.info("Start by logging a tablet on the left!")
