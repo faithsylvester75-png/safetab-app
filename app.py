@@ -3,52 +3,43 @@ import pandas as pd
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
-# ---------------- PAGE SETUP ---------------- #
 st.set_page_config(page_title="SafeTab Pro", layout="wide")
 st.title("🛡️ SafeTab: Smart Search & Sync")
 
-# ---------------- GOOGLE SHEETS CONNECTION ---------------- #
+# Connect to Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
+URL = "https://docs.google.com/spreadsheets/d/1-1hSN2Us6wTdrhKiwy_58AlVZHX6kwjxPPrGWnpocN4/edit"
 
-# ---------------- SIDEBAR: RECORD SUBMISSION ---------------- #
+# SIDEBAR: RECORD SUBMISSION
 st.sidebar.header("📥 Record Submission")
-
 with st.sidebar.form("input_form", clear_on_submit=True):
     name = st.text_input("Student Name")
     tab_id = st.text_input("Tablet ID")
     submitted = st.form_submit_button("Log Tablet")
 
-# ---------------- HANDLE FORM SUBMISSION ---------------- #
 if submitted and name and tab_id:
+    # Read with ttl=0 to bypass cache
+    df = conn.read(spreadsheet=URL, ttl=0)
     
-    # Read existing sheet data
-    try:
-        df = conn.read(ttl=0)
-    except:
-        df = pd.DataFrame(columns=["Name", "Tablet ID", "Time", "Date"])
-
-    # Create new entry
     new_entry = pd.DataFrame([{
-        "Name": name,
-        "Tablet ID": tab_id,
-        "Time": datetime.now().strftime("%H:%M"),
+        "Name": name, 
+        "Tablet ID": tab_id, 
+        "Time": datetime.now().strftime("%H:%M"), 
         "Date": datetime.now().strftime("%Y-%m-%d")
     }])
-
-    # Append new entry
+    
     updated_df = pd.concat([df, new_entry], ignore_index=True)
-
-    # Update Google Sheet
-    conn.update(data=updated_df)
-
-    st.sidebar.success(f"✅ Logged successfully: {name}")
+    
+    # Force the update using the explicit URL
+    conn.update(spreadsheet=URL, data=updated_df)
+    
+    st.sidebar.success(f"✅ Verified: {name}")
     st.rerun()
 
-# ---------------- MAIN PAGE: DISPLAY DATA ---------------- #
-st.subheader("🔍 Current Logs")
-
+# MAIN PAGE: VIEW DATA
 try:
-    data = conn.read(ttl=0)
+    data = conn.read(spreadsheet=URL, ttl=0)
+    st.subheader("🔍 Current Logs")
     st.dataframe(data, use_container_width=True)
-except:
-    st.info("No records found yet. Log your first tablet!")
+except Exception as e:
+    st.info("System Ready. Please log a tablet to begin.")
